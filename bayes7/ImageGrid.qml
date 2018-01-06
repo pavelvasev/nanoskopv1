@@ -1,9 +1,9 @@
 Item {
-    OpacityParam {}
 
     property var htmlTagName: "canvas"
     id: rim
 
+    // три канала
     property var input: [ [], [], [] ]
     
     onInputChanged: loadinput()

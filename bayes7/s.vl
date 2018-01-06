@@ -7,19 +7,6 @@ Scene {
     id: imfp
     //file: Qt.resolvedUrl("00_65.png")
     file: "http://data3.lact.in:4567/data/input/work/Brain/111/00_65.png"
-
-    property var urla
-
-    onFileChanged: {
-      if (file instanceof File) {
-        var fr = new FileReader();
-        fr.onload = function () {
-            urla = fr.result;
-        }
-        fr.readAsDataURL(file);
-      }
-        else urla = file;
-    }
   }
 
   FileParam {
@@ -36,49 +23,21 @@ Scene {
     skip: "#"
   }
 
+  ImageToArray {
+    file: imfp.file
+    id: pimage
+    onHChanged:console.log(h);
+  }
+
   BayesCompute {
     id: bc
     stat: csv.output
     n: 16
-    onStatChanged: setup()
-//    onOutputChanged: console.log("baaa",output);
+    greypixels: pimage.pixels
+    w: pimage.w
+    h: pimage.h
   }
 
-  Image { // картинка для анализа
-    source: imfp.urla
-    //onSourceChanged: console.log("image source=",source );
-    onStatusChanged: if (status == Image.Ready) { setup( ) }
-    id: qimg
-//    visible: false
-  }
-
-  // производит настройку BayesCompute
-  function setup()
-  {
-    var img = qimg.dom.firstChild;
-    if (!img) return; if (!bc.stat || bc.stat.length == 0) return;
-
-    var w=img.naturalWidth;
-    var h=img.naturalHeight;
-    if (w==0 ) return;
-    console.log("setting up..");
-
-    var canvas = document.createElement('canvas');
-    canvas.width = w; canvas.height = h;
-    var ctx = canvas.getContext('2d');
-    ctx.drawImage(img, 0, 0, w, h);
-
-    var imd = ctx.getImageData(0, 0, w, h);
- 
-    bc.w = w; bc.h = h;
-
-    var pixels = [];
-    for (var y=0; y<h; y++) for (var x=0;x<w;x++)
-       pixels.push( Math.max( imd.data[ (y*w +x)*4 ], Math.max( imd.data[ (y*w +x)*4+1 ], imd.data[ (y*w +x)*4+2 ] ) ) );
-
-    bc.greypixels = pixels;
-    console.log("pixels len=",pixels.length );
-  }
 
   Text {
     text: "Что смотреть:"
@@ -195,6 +154,14 @@ Scene {
   }
 
   ImageGrid {
+    id: ppp
+    width: bc.w
+    height: bc.h
+    input: [ bc.greypixels,bc.greypixels,bc.greypixels]
+  }
+
+  ImageGrid {
+    OpacityParam{}
     id: imgr
     width: bc.w
     height: bc.h

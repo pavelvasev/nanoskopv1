@@ -1,0 +1,228 @@
+Scene {
+  id: main
+
+  FileParam {
+    tag: "right"
+    text: "Изображение для анализа"
+    id: imfp
+    //file: Qt.resolvedUrl("00_65.png")
+    file: "http://data3.lact.in:4567/data/input/work/Brain/111/00_65.png"
+
+    property var urla
+
+    onFileChanged: {
+      if (file instanceof File) {
+        var fr = new FileReader();
+        fr.onload = function () {
+            urla = fr.result;
+        }
+        fr.readAsDataURL(file);
+      }
+        else urla = file;
+    }
+  }
+
+  FileParam {
+    tag: "right"
+    id: resp
+    //file: Qt.resolvedUrl("../result16.txt")
+    file: "http://data3.lact.in:4567/data/stat-2017-12/result16.txt"
+    text: "Файл статиститки"
+  }
+
+  CsvLoader {
+    id: csv
+    file: resp.file
+    skip: "#"
+  }
+
+  BayesCompute {
+    id: bc
+    stat: csv.output
+    n: 16
+    onStatChanged: setup()
+//    onOutputChanged: console.log("baaa",output);
+  }
+
+  Image { // картинка для анализа
+    source: imfp.urla
+    //onSourceChanged: console.log("image source=",source );
+    onStatusChanged: if (status == Image.Ready) { setup( ) }
+    id: qimg
+//    visible: false
+  }
+
+  // производит настройку BayesCompute
+  function setup()
+  {
+    var img = qimg.dom.firstChild;
+    if (!img) return; if (!bc.stat || bc.stat.length == 0) return;
+
+    var w=img.naturalWidth;
+    var h=img.naturalHeight;
+    if (w==0 ) return;
+    console.log("setting up..");
+
+    var canvas = document.createElement('canvas');
+    canvas.width = w; canvas.height = h;
+    var ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, w, h);
+
+    var imd = ctx.getImageData(0, 0, w, h);
+ 
+    bc.w = w; bc.h = h;
+
+    var pixels = [];
+    for (var y=0; y<h; y++) for (var x=0;x<w;x++)
+       pixels.push( Math.max( imd.data[ (y*w +x)*4 ], Math.max( imd.data[ (y*w +x)*4+1 ], imd.data[ (y*w +x)*4+2 ] ) ) );
+
+    bc.greypixels = pixels;
+    console.log("pixels len=",pixels.length );
+  }
+
+  Text {
+    text: "Что смотреть:"
+    property var tag: "left"
+  }
+
+  RadioParam {
+    values: ["фон","оболочка","разрыв","исходное"]
+    id: wparam
+  }
+
+
+  // фон
+  C1 {
+    id: c1
+    //input: bc.output
+    input: [bc.output[0]||[],bc.output[1]||[],bc.output[2]||[],bc.greypixels||[]]
+    func: { return function(channels,i,farg) { return channels[farg][i]; } }
+    farg: wparam.value
+  }
+
+  C1 {
+    id: c1a
+    input: [c1.output]
+    func: { return function(channels,i,farg) { return 255 * (channels[0][i] - farg[0]) / farg[2]; } }
+    farg: [c1.min, c1.max, c1.max-c1.min]
+  }
+
+  Param {
+    id: sparam
+    text: "Граница (v0)"
+    min: 0
+    max: 254
+    value :0
+  }
+  Param {
+    id: sparam2
+    text: "окно (vs)"
+    min: 0
+    max: 255
+    value :255
+  }
+
+  C1 {
+    id: c1aa
+    input: [c1a.output]
+    func: { return function(channels,i,farg) { 
+            var v = channels[0][i];
+            if (v < farg[0]) return 0;
+            if (v > farg[1]) return 0;
+	    return v; 
+           } }
+    farg: [sparam.value,sparam.value +sparam2.value]
+  }
+
+  ComboBoxParam {
+    text: "Обработать цвет"
+
+    values: gimmestit
+    id: pf
+
+    property var fun: gimmesfun( value )
+  }
+
+   property var gimmestit: ["нет","x","sqrt","sqrt4","log","x^2","x^4"]
+   function gimmesfun( value ) {
+    if (value == 0) return function(val) { return val };
+    value = value-1; 
+    if (value == 0)
+       return function(val) {return val;}
+    else if (value == 1)
+       return function(val) {return Math.sqrt(val);}
+       else if (value == 2)
+          return function(val) {return Math.sqrt(Math.sqrt(val));}
+          else if (value == 3)
+             return function(val) {return Math.log(1+val);}
+    if (value == 4)
+      return function(val) {return val*val;}
+      
+    return function(val) {return val*val*val*val;}
+  }
+
+  C1 {
+    id: c1norm
+    enabled: pf.value>0
+    input: [c1aa.output]
+    func: { return function(channels,i,farg) {
+       var v = channels[0][i];
+       return 255 * farg[2](v-farg[0])/farg[1];
+    }; }
+    farg: [c1aa.min, pf.fun( c1aa.max-c1aa.min ) ,pf.fun]
+    
+  }
+
+
+  Text {
+    property var tag: "left"
+    text: "Построить маску:"
+  }
+  RadioParam {
+    values: ["не надо","маска","анти-маска"]
+    id: rmul
+  }
+
+  C1 {
+    id: c1b
+    input: [c1norm.output]
+    func: { return function(channels,i,farg) {
+       if (farg[1] == 1) return channels[0][i] > 0 ? farg[0][i] : 0;
+       if (farg[1] == 2) return channels[0][i] == 0 ? farg[0][i] : 0;
+    }; }
+    farg: [bc.greypixels, rmul.value]
+    enabled: rmul.value > 0
+  }
+
+  ImageGrid {
+    id: imgr
+    width: bc.w
+    height: bc.h
+    //property var input: [c1.output, c2.output, c3.output]
+    input: {
+       if (rmul.value > 0) return [ c1b.output,c1b.output, c1b.output ];
+       if (wparam.value == 0) return [ [], c1b.output, [] ];
+       if (wparam.value == 1) return [ [], [], c1b.output ];
+       if (wparam.value == 2) return [ c1b.output, [], [] ];
+       return [ c1b.output,c1b.output, c1b.output ];
+    }
+  }
+
+  Button {
+    property var tag: "left"
+    text: "Скачать результат"
+    onClicked: downloadURI( imgr.dom.toDataURL(), "result.png" );
+    width: 160
+  }
+
+  function downloadURI(uri, name) {
+            var link = document.createElement("a");
+            link.download = name;
+            link.href = uri;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            delete link;
+  }
+
+}

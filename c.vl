@@ -1,0 +1,269 @@
+import components.creative_points 1.0
+
+Scene {
+
+  CreativePoints {
+  //Points {
+    positions: fn()
+    radius: 1
+    colors: colorize()
+  }
+
+  property var n: 16
+
+  function fn() {
+    var res = [];
+
+
+    var vv = mincol.value;
+    var uu = pmaxvalue;
+    var ps = pscale.value;
+
+    var nn=2*n+1;
+
+    for (var y=0; y<nn;y++)
+    for (var x=0; x<nn;x++)
+    for (var i=vv; i<uu; i++) {
+      res.push( x*ps );
+      res.push( y*ps );
+      res.push( i );
+    }
+    return res;
+  }
+
+  DataParam {
+    id: dp
+    file: Qt.resolvedUrl("result.txt")
+  }
+
+  CsvLoader {
+    id: csv
+    file: dp.file
+    skip: "#"
+  }
+
+  function colorize() {
+    dat = csv.output;
+    console.log(dat);
+    if (dat.length == 0) return [];
+
+    var res = [];
+
+    var nn=2*n+1;
+
+    var mins = [10e10,10e10,10e10];
+    var maxs = [0,0,0];
+
+    var uu = pmaxvalue;
+    var vv = mincol.value;
+
+    var predfun = pred.fun;
+    var pgreenfun = pgreen.fun;
+    var pbluefun = pblue.fun;
+
+    for (var y=0; y<nn;y++)
+    for (var x=0; x<nn;x++) {
+      //console.log(1 + y*nn+x);
+      var pixdata = dat[ y*nn+x];
+      //console.log(pixdata);
+    for (var i=vv; i<uu; i++) {
+      var t1 = predfun( pixdata,i );
+      var t2 = pgreenfun( pixdata,i );
+      var t3 = pbluefun( pixdata,i );
+
+      res.push(t1);
+      res.push(t2);
+      res.push(t3);
+
+      var vals=[t1,t2,t3];
+      for (var q=0; q<3; q++) {
+        mins[q] = Math.min( mins[q],vals[q]);
+        maxs[q] = Math.max( maxs[q],vals[q]);
+      }
+    }
+  }
+
+  console.log("before normalization");
+  console.log("mins=",mins, "maxs=",maxs);
+  console.log(res);
+
+    var predsfun = preds.fun;
+    var pgreensfun = pgreens.fun;
+    var pbluesfun = pblues.fun;
+
+    maxs[0] = predsfun(maxs[0]-mins[0]); maxs[0] = Math.max( maxs[0],1 );
+    maxs[1] = pgreensfun(maxs[1]-mins[1]); maxs[1] = Math.max( maxs[1],1 );
+    maxs[2] = pbluesfun(maxs[2]-mins[2]); maxs[2] = Math.max( maxs[2],1 );
+    console.log("after normalization");
+    console.log("maxs=",maxs);
+
+    for (var i=0; i<res.length; i+=3) {
+      res[i+0] = predsfun(res[i+0]-mins[0]) / maxs[0];
+      res[i+1] = pgreensfun(res[i+1]-mins[1]) / maxs[1];
+      res[i+2] = pbluesfun(res[i+2]-mins[2]) / maxs[2];
+
+/* todo дальше экспериментировать - вычитать каналы между собой, чтобы видеть разницу. плюс нормализовать их повторно.
+      res[i] = Math.abs( res[i] - res[i+2] );
+      res[i+1]=0;
+      res[i+2]=0;
+*/
+    }
+
+    console.log(res);
+    return res;
+  }
+
+  Param {
+    text: "min"
+    min: 0
+    max: 256
+    value: 0
+    id: mincol
+    tag: "right"
+  }
+
+  Param {
+    text: "delta"
+    min: 0
+    max: 256
+    value: 256
+    id: pdelta
+    tag: "right"
+  }
+
+  Param {
+    text: "max"
+    min: 0
+    max: 256
+    value: 256
+    id: maxcol
+    tag: "right"
+    visible: false
+  }
+  property var pmaxvalue: Math.min( mincol.value + pdelta.value,256)
+
+  Param {
+    text: "масштаб"
+    min: 1
+    max: 20
+    value: 1
+    id: pscale
+    tag: "right"
+  }
+
+  RadioParam {
+    text: "Красный канал"
+    values: ["повреж","повреж-фон","повреж-обол","ничего"]
+    color:"red"
+    id: pred
+
+    property var fun: {
+      if (value == 0) return function(arr,i) {
+        return arr[3*i+2];
+      }
+      if (value == 1) return function(arr,i) {
+        return Math.abs(arr[3*i+2] - arr[3*i]);
+      }
+      if (value == 2) return function(arr,i) {
+        return Math.abs(arr[3*i+2] - arr[3*i+1]);
+      }
+      return function(arr,i) { return 0; }
+    }
+  }
+  RadioParam {
+    text: "отображение красного"
+
+    values: gimmestit
+    id: preds
+
+    property var fun: gimmesfun( value )
+  }
+
+   property var gimmestit: ["линейный","sqrt","sqrt4","log","x^2","x^4"]
+  function gimmesfun(  value ) {
+    if (value == 0)
+       return function(val) {return val;}
+    else if (value == 1)
+       return function(val) {return Math.sqrt(val);}
+       else if (value == 2)
+          return function(val) {return Math.sqrt(Math.sqrt(val));}
+          else if (value == 3)
+             return function(val) {return Math.log(1+val);}
+    if (value == 4)
+      return function(val) {return val*val;}
+
+    return function(val) {return val*val*val*val;}
+  }
+
+  RadioParam {
+    text: "Зеленый канал"
+    color:"green"
+    values: ["фон","фон-обол","ничего"]
+    id: pgreen
+    property var fun: {
+      if (value == 0) return function(arr,i) {
+        return arr[3*i];
+      }
+      if (value == 1) return function(arr,i) {
+        return Math.abs(arr[3*i] - arr[3*i+1]);
+      }
+      return function(arr,i) { return 0; }
+    }
+  }
+  RadioParam {
+    text: "отображение зеленого"
+    values: gimmestit
+    id: pgreens
+    property var fun: gimmesfun( value )
+  }
+
+  RadioParam {
+    text: "Синий канал"
+    color:"blue"
+    values: ["оболочка","повреж","фон","ничего"]
+    id: pblue
+    property var fun: {
+      if (value == 0) return function(arr,i) {
+        return arr[3*i+1];
+      }
+      if (value == 1) return function(arr,i) {
+        return arr[3*i+2];
+      }
+      if (value == 2) return function(arr,i) {
+        return arr[3*i];
+      }
+      return function(arr,i) { return 0; }
+    }
+  }
+  RadioParam {
+    text: "отображение синего"
+    values: gimmestit
+    id: pblues
+    property var fun: gimmesfun( value )
+  }
+
+  // яркость
+  Points {
+    radius: 5
+    positions: {
+      var res = [];
+      for (var i=0; i<256; i++) {
+        res.push(-5);
+        res.push(0);
+        res.push(i);
+      }
+      return res;
+    }
+    colors: {
+      var res = [];
+      for (var i=0; i<256; i++) {
+        res.push(i/255.0);
+        res.push(i/255.0);
+        res.push(i/255.0);
+      }
+      return res;
+    }
+
+  }
+
+}

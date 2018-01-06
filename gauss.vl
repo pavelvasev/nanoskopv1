@@ -1,0 +1,87 @@
+import components.creative_points 1.0
+
+Scene {
+  cameraPos: [14.353282524141703,-40.404827546970836,27.49212765350895]
+  cameraCenter: [14.47829865835207,7.708279980137595,3.058903801774704]
+
+  SceneMouseEvents {
+    onDoubleClicked: {
+      var r = pts.intersect( sceneMouse );
+      //console.log(r);
+      var c = r ? r.index : -1;
+      if (c >= 0) {
+        console.log( pts.positions[ c*3+2 ] / zscalep.value );
+      }
+    }
+  }
+
+
+  CreativePoints {
+    positions: fn()
+    radius: 2
+    id: pts
+    colors: palet.output
+  }
+
+  Param {
+    min: 0.1; max: 10; step: 0.05; value: 1
+    id: sigmap
+    text: "sigma"
+  }
+
+  Param {
+    text: "масштаб оси Z"
+    id: zscalep
+    min: 1; max: 100; value: 10
+  }
+
+  Param {
+    text: "Половина квадрата:"
+    min: 2; max: 100; value: 16
+    id: squarenp
+  }
+
+  property var n: squarenp.value
+
+  function fn() {    var res = [];
+    var ps=1;
+
+    var nn=2*n+1;
+    var sigma = sigmap.value;
+    var ic = n;
+    var zscale = zscalep.value;
+    
+    for (var y=0; y<nn;y++)
+    for (var x=0; x<nn;x++) {
+      res.push( x*ps );
+      res.push( y*ps );
+      res.push( valN( sigma, x,y, ic ) * zscale );
+      //console.log(x,y,valN( sigma, x,y, ic ));
+    }
+    return res;
+  }
+  
+  function valN( sigma, i,j, ic ) {
+    return (1.0 / (2 * Math.PI * sigma * sigma )) * Math.exp( (-1.0 / 2) * ( (i-ic)*(i-ic) + (j-ic)*(j-ic) ) / (sigma * sigma ) );
+  }
+
+///
+  PlaneX{
+    VisibleParam{ text: "плоскость"; checked: false }
+  }
+
+/// раскраска
+  property var scalardata: {  // вытащим данные по Z
+    if (!pts.positions) return [];
+    var res = [];
+    for (var i=0; i<pts.positions.length; i+=3)
+      res.push( pts.positions[i+2] );
+    return res;
+  }
+
+  Paletter {
+    input: scalardata
+    id: palet
+  }
+
+}

@@ -20,7 +20,7 @@ Item {
     min: 0
     max: 20
     step: 0.1
-    value: 10
+    value: 3
     id: sigp
     Text {
       text: "<a target='_blank' href='http://viewlang.ru/code/scene.html?s=" + Qt.resolvedUrl( "../gauss.vl")+ "#{\"params\":{\"sigma\":" + sigp.value.toString() + "}}'>справка по сигме</a>"

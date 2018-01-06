@@ -15,12 +15,30 @@ Scene {
     //file: Qt.resolvedUrl("../result16.txt")
     file: "http://data3.lact.in:4567/data/stat-2017-12/result16.txt"
     text: "Файл статиститки"
+
+  }
+
+  Text {
+    property var tag: "right"
+    text: "N="+csv.n
   }
 
   CsvLoader {
     id: csv
     file: resp.file
-    skip: "#"
+    //skip: "#"
+    property var n: 16
+    property var output2: {
+      if (!output[0]) return [];
+      var line1 = output[0].join(" ");
+
+      var regex = /N=(\d+)/;
+      var m = line1.match( regex );
+      console.log("MATCH=",m);
+      csv.n = parseInt( m[1] );
+      console.log("so csv.n=",n);
+      return output.slice( 1 );
+    }
   }
 
   ImageToArray {
@@ -31,8 +49,8 @@ Scene {
 
   BayesCompute {
     id: bc
-    stat: csv.output
-    n: 16
+    stat: csv.output2
+    n: csv.n
     greypixels: pimage.pixels
     w: pimage.w
     h: pimage.h
@@ -161,7 +179,7 @@ Scene {
   }
 
   ImageGrid {
-    OpacityParam{}
+    OpacityParam{ value: 75 }
     id: imgr
     width: bc.w
     height: bc.h

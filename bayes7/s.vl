@@ -4,6 +4,7 @@ Scene {
   FileParam {
     tag: "right"
     text: "Изображение для анализа"
+    guid: "input"
     id: imfp
     //file: Qt.resolvedUrl("00_65.png")
     file: "http://data3.lact.in:4567/data/input/work/Brain/111/00_65.png"

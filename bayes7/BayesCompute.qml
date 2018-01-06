@@ -28,7 +28,7 @@ Item {
   }
 
   property var workers
-  property var wpath: Qt.resolvedUrl("worker.js")
+  property var wpath: formatSrc( Qt.resolvedUrl("worker.js") ) // formatSrc is viewlang's method
 
   Component.onCompleted: {
     console.log("writing script..");

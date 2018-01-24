@@ -28,13 +28,13 @@ function worker_function() {
 
      var nn = 2*n+1;
 
-     var res = [ [], [], [] ];
+     var res = [ [], [], [], [] ];
 
 //     console.log("computeline called. y=",y);
 
      if (stat.length == 0) {
 //       console.log("stat empty - exiting");
-       for (var x=0; x<w; x++) { res[0].push( undefined );res[1].push( undefined );res[2].push( undefined ); }
+       for (var x=0; x<w; x++) { res[0].push( undefined );res[1].push( undefined );res[2].push( undefined );res[3].push(undefined); }
        return res;
      }
 
@@ -46,7 +46,7 @@ function worker_function() {
 
      for (var x=0; x<w; x++) {
        if (x < n || x >= w-n || x<x0 || x>=x1) {
-         res[0].push(undefined);res[1].push(undefined);res[2].push(undefined);
+         res[0].push(undefined);res[1].push(undefined);res[2].push(undefined);res[3].push(undefined);
          continue;
        }
 //       res.push( x % 3 );
@@ -55,7 +55,7 @@ function worker_function() {
          return pixels[ (y+j-n)*w+(x+i-n) ];
        }
 
-       var square_types = [0,0,0];
+       var square_types = [0,0,0,0];
 
        for (var i=0; i<nn; i++)
        for (var j=0; j<nn; j++) {
@@ -66,10 +66,11 @@ function worker_function() {
 
          var bright = getpix( i,j );
          var t = [getstat( bright,0),getstat( bright,1),getstat( bright,2) ];
+         t[3] = t[1]+t[2]; // оболочка+фон
          var sumstat = t[0]+t[1]+t[2];  // var sumstat = getstat( bright,0 ) + getstat( bright,1 ) + getstat( bright,2 );
 
          var gaussval = gauss( sigma, i, j, n );
-         for (var k=0; k<3; k++) {
+         for (var k=0; k<4; k++) {
            var estimate_type = t[k] / sumstat;  // var estimate_type = getstat( bright, k ) / sumstat;
            square_types[k] += estimate_type * gaussval; // gauss( sigma, i, j, n );
          }
@@ -77,6 +78,7 @@ function worker_function() {
        res[0].push( square_types[0] );
        res[1].push( square_types[1] );
        res[2].push( square_types[2] );
+       res[3].push( square_types[3] );
      } // x
 
      //console.log("RES=",res);

@@ -14,7 +14,7 @@ Scene {
     tag: "right"
     id: resp
     //file: Qt.resolvedUrl("../result16.txt")
-    file: "http://data3.lact.in:4567/data/stat-2017-12/result16.txt"
+    file: "http://data3.lact.in:4567/data/stat-2017-12/result16new.txt"
     text: "Файл статиститки"
 
   }
@@ -68,16 +68,22 @@ Scene {
   }
 
   RadioParam {
-    values: ["фон","оболочка","разрыв","исходное"]
+    values: ["фон","оболочка","разрыв","об+разрыв","исходное"]
     id: wparam
   }
 
+  Button {
+    property var tag: "left"
+    text: "Скачать числа"
+    onClicked: downloadJson({ w: bc.w, h: bc.h, data: c1.output},"channel-"+wparam.value+".txt")
+    width: 160
+  }
 
   // фон
   C1 {
     id: c1
     //input: bc.output
-    input: [bc.output[0]||[],bc.output[1]||[],bc.output[2]||[],bc.greypixels||[]]
+    input: [bc.output[0]||[],bc.output[1]||[],bc.output[2]||[], bc.output[3]||[], bc.greypixels||[]]
     func: { return function(channels,i,farg) { return channels[farg][i]; } }
     farg: wparam.value
   }
@@ -221,6 +227,7 @@ Scene {
        if (wparam.value == 0) return [ [], c1b.output, [] ];
        if (wparam.value == 1) return [ [], [], c1b.output ];
        if (wparam.value == 2) return [ c1b.output, [], [] ];
+       if (wparam.value == 3) return [ c1b.output, [], c1b.output ]; // оболочка+разрыв
        return [ c1b.output,c1b.output, c1b.output ];
     }
   }
@@ -229,7 +236,7 @@ Scene {
 
   Button {
     property var tag: "left"
-    text: "Скачать результат"
+    text: "Скачать картинку"
     onClicked: downloadURI( imgr.dom.toDataURL(), "result.png" );
     width: 160
   }
@@ -243,5 +250,29 @@ Scene {
             document.body.removeChild(link);
             delete link;
   }
+
+  // Function to download data to a file
+  function downloadJson(data, filename) {
+    data = JSON.stringify(data);
+    type =  {type : 'application/json'};
+    var file = new Blob([data], {type: type});
+    if (window.navigator.msSaveOrOpenBlob) // IE10+
+        window.navigator.msSaveOrOpenBlob(file, filename);
+    else { // Others
+        var a = document.createElement("a"),
+                url = URL.createObjectURL(file);
+        a.href = url;
+        a.download = filename;
+        //a.target="_blank";
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(function() {
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        }, 0); 
+  }
+}
+
+
 
 }

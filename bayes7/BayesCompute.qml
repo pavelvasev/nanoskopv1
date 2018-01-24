@@ -81,6 +81,7 @@ Item {
               r[0][ y*w+x ] = line[0][x];
               r[1][ y*w+x ] = line[1][x];
               r[2][ y*w+x ] = line[2][x];
+              r[3][ y*w+x ] = line[3][x];
            }
          } else { // заказ выполнен
            //console.log("bayes signal outputchanged",y);
@@ -99,7 +100,7 @@ Item {
   onHChanged: clearprizn();
 
   function clearprizn() {
-    output = [new Array( bc.h * bc.w ),new Array( bc.h * bc.w ),new Array( bc.h * bc.w )];
+    output = [new Array( bc.h * bc.w ),new Array( bc.h * bc.w ),new Array( bc.h * bc.w ),new Array( bc.h * bc.w )];
   }
 
    CheckBoxParam {

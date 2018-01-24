@@ -16,7 +16,14 @@ Scene {
     //file: Qt.resolvedUrl("../result16.txt")
     file: "http://data3.lact.in:4567/data/stat-2017-12/result16new.txt"
     text: "Файл статиститки"
+  }
 
+  RadioParam {
+    values: ["result16new.txt","result16.txt","result24.txt"]
+    id: statparam
+    property var fil: "http://data3.lact.in:4567/data/stat-2017-12/"+values[value||0]
+    onFilChanged: resp.file = fil
+    property var tag: "right"
   }
 
   Text {
